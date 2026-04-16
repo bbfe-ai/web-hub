@@ -159,22 +159,15 @@ function renderProjects() {
           <span class="card-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>
           ${p.category ? `<span class="card-category">${escapeHtml(p.category)}</span>` : ''}
         </div>
-        <div class="card-info-row">
-          <span class="card-info-label">地址:</span>
-          <span class="card-url" title="${escapeHtml(p.url)}">${escapeHtml(p.url)}</span>
-        </div>
-        ${p.description ? `
-        <div class="card-info-row">
-          <span class="card-info-label">描述:</span>
-          <span class="card-desc" title="${escapeHtml(stripHtml(p.description))}">${stripHtml(p.description)}</span>
-        </div>` : ''}
+        <span class="card-url" title="${escapeHtml(p.url)}">${escapeHtml(p.url)}</span>
+        ${p.description ? `<span class="card-desc" title="${escapeHtml(stripHtml(p.description))}">${stripHtml(p.description)}</span>` : ''}
         <div class="card-footer">
           <span class="card-time">${formatTime(p.created_at)}</span>
           <div class="card-actions">
-            <button class="card-action-btn" onclick="event.stopPropagation();window.open('${escapeHtml(p.url)}', '_blank')" title="外部打开">外部打开</button>
             <button class="card-action-btn" onclick="event.stopPropagation();showDetailModal(${p.id})" title="详情">详情</button>
             <button class="card-action-btn" onclick="event.stopPropagation();editProject(${p.id})" title="编辑">编辑</button>
             <button class="card-action-btn danger" onclick="event.stopPropagation();deleteProject(${p.id})" title="删除">删除</button>
+            <button class="card-action-btn" onclick="event.stopPropagation();openInIframe(${p.id})" title="在平台内打开并截图">截图</button>
           </div>
         </div>
       </div>
@@ -253,6 +246,39 @@ async function capturePageScreenshot() {
   }
 }
 
+// 在平台内使用 iframe 打开项目（支持截图）
+function openInIframe(id) {
+  const p = projects.find(x => x.id === id);
+  if (!p) return;
+
+  currentProjectId = p.id;
+  currentIframeUrl = p.url;
+  document.getElementById('iframeName').textContent = p.name;
+  document.getElementById('iframeUrl').textContent = p.url;
+  document.getElementById('projectIframe').src = p.url;
+  updateScreenshotBtn(p);
+  document.getElementById('iframeOverlay').style.display = 'flex';
+
+  fetch(`${API}/projects/${id}/open`).catch(() => {});
+
+  let polls = 0;
+  const pollInterval = setInterval(async () => {
+    polls++;
+    try {
+      const updated = await api(`${API}/projects`);
+      const proj = updated.data.find(x => x.id === id);
+      if (proj && proj.screenshot_count > (p.screenshot_count || 0)) {
+        p.screenshot_count = proj.screenshot_count;
+        p.screenshot_paths = proj.screenshot_paths;
+        p.thumbnail = proj.thumbnail;
+        renderProjects();
+        clearInterval(pollInterval);
+      }
+    } catch { /* ignore */ }
+    if (polls >= 6) clearInterval(pollInterval);
+  }, 2000);
+}
+
 function hideIframe() {
   document.getElementById('iframeOverlay').style.display = 'none';
   document.getElementById('projectIframe').src = 'about:blank';
@@ -309,17 +335,17 @@ async function editProject(id) {
   const screenshots = await api(`${API}/projects/${id}/screenshots`);
   const section = document.getElementById('screenshotSection');
   const list = document.getElementById('screenshotList');
+  section.style.display = 'block';
   if (screenshots.data && screenshots.data.length > 0) {
-    section.style.display = 'block';
     list.innerHTML = screenshots.data.map(s => `
       <div class="screenshot-item" id="ss-${s.id}">
         <img src="${escapeHtml(s.path)}" alt="截图">
         <span class="screenshot-badge">${s.thumbnail ? '主图' : ''}</span>
-        <button class="screenshot-delete-btn" onclick="deleteScreenshot(${s.id}, ${p.id})" title="删除截图">✕</button>
+        <button class="screenshot-delete-btn" onclick="event.stopPropagation();deleteScreenshot(${s.id}, ${p.id})" title="删除截图">✕</button>
       </div>
     `).join('');
   } else {
-    section.style.display = 'none';
+    list.innerHTML = `<div class="screenshot-paste-hint">📋 在此页面按 Ctrl+V 粘贴截图（最多4张）</div>`;
   }
 }
 
@@ -354,25 +380,31 @@ async function deleteProject(id) {
   refresh();
 }
 
-async function deleteScreenshot(screenshotId, projectId) {
-  if (!confirm('确定要删除此截图吗？')) return;
-  await api(`${API}/projects/${projectId}/screenshot/${screenshotId}`, { method: 'DELETE' });
-  showToast('截图已删除');
-  // Refresh screenshot list
+// 只刷新截图列表，不重置表单其他字段
+async function refreshScreenshotList(projectId) {
   const screenshots = await api(`${API}/projects/${projectId}/screenshots`);
   const section = document.getElementById('screenshotSection');
   const list = document.getElementById('screenshotList');
+  section.style.display = 'block';
   if (screenshots.data && screenshots.data.length > 0) {
     list.innerHTML = screenshots.data.map(s => `
       <div class="screenshot-item" id="ss-${s.id}">
         <img src="${escapeHtml(s.path)}" alt="截图">
         <span class="screenshot-badge">${s.thumbnail ? '主图' : ''}</span>
-        <button class="screenshot-delete-btn" onclick="deleteScreenshot(${s.id}, ${projectId})" title="删除截图">✕</button>
+        <button class="screenshot-delete-btn" onclick="event.stopPropagation();deleteScreenshot(${s.id}, ${projectId})" title="删除截图">✕</button>
       </div>
     `).join('');
   } else {
-    section.style.display = 'none';
+    list.innerHTML = `<div class="screenshot-paste-hint">📋 在此页面按 Ctrl+V 粘贴截图（最多4张）</div>`;
   }
+}
+
+async function deleteScreenshot(screenshotId, projectId) {
+  if (!confirm('确定要删除此截图吗？')) return;
+  await api(`${API}/projects/${projectId}/screenshot/${screenshotId}`, { method: 'DELETE' });
+  showToast('截图已删除');
+  // 只刷新截图列表，不关闭编辑弹窗
+  refreshScreenshotList(projectId);
   refresh();
 }
 
@@ -427,35 +459,27 @@ function showToast(msg, type = 'success') {
 function initLightbox() {
   const grid = document.getElementById('projectsGrid');
   let currentCardPreview = null;
+  let lightboxTimer = null;
   
-  // 使用 mouseover/mouseout 进行事件委托
   grid.addEventListener('mouseover', function(e) {
-    // 从事件目标向上查找 .card-preview 容器
     const cardPreview = e.target.closest('.card-preview');
     
-    // 如果进入了一个新的 card-preview
     if (cardPreview && cardPreview !== currentCardPreview) {
+      // 鼠标移到新卡片，先清除之前的定时器
+      clearTimeout(lightboxTimer);
       currentCardPreview = cardPreview;
       
-      // 查找当前卡片内的所有带 data-lightbox 的图片
       const lightboxImgs = cardPreview.querySelectorAll('[data-lightbox]');
       if (lightboxImgs.length === 0) return;
       
-      // 如果是单张图片，直接显示
-      if (lightboxImgs.length === 1) {
+      // 延迟 800ms 后才显示大图
+      lightboxTimer = setTimeout(() => {
         const src = lightboxImgs[0].getAttribute('data-lightbox');
-        if (src) {
+        if (src && currentCardPreview === cardPreview) {
           document.getElementById('lightboxImg').src = src;
           document.getElementById('lightboxOverlay').style.display = 'flex';
         }
-      } else {
-        // 多张图片时，显示第一张（或可以根据需求调整）
-        const firstSrc = lightboxImgs[0].getAttribute('data-lightbox');
-        if (firstSrc) {
-          document.getElementById('lightboxImg').src = firstSrc;
-          document.getElementById('lightboxOverlay').style.display = 'flex';
-        }
-      }
+      }, 400);
     }
   });
 
@@ -463,9 +487,10 @@ function initLightbox() {
     const cardPreview = e.target.closest('.card-preview');
     if (!cardPreview) return;
     
-    // 检查鼠标是否真的离开了 card-preview 区域
     const relatedTarget = e.relatedTarget;
     if (!cardPreview.contains(relatedTarget)) {
+      // 鼠标离开卡片，清除定时器并隐藏大图
+      clearTimeout(lightboxTimer);
       currentCardPreview = null;
       document.getElementById('lightboxOverlay').style.display = 'none';
     }
@@ -587,6 +612,58 @@ document.addEventListener('keydown', e => {
     }
   }, false);
 })();
+
+// ============ 粘贴图片上传截图 ============
+document.addEventListener('paste', function(e) {
+  // 只在编辑弹窗打开时处理粘贴
+  const addModal = document.getElementById('addModal');
+  if (!addModal || addModal.style.display === 'none') return;
+  
+  const editId = document.getElementById('editId').value;
+  if (!editId) return; // 新增项目时没有ID，无法关联截图
+  
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') === -1) continue;
+    
+    const file = items[i].getAsFile();
+    if (!file) continue;
+    
+    e.preventDefault();
+    
+    // 检查截图数量限制
+    const count = document.querySelectorAll('.screenshot-item').length;
+    if (count >= 4) {
+      showToast('最多支持 4 张截图', 'error');
+      return;
+    }
+    
+    // 上传粘贴的图片
+    const formData = new FormData();
+    formData.append('screenshot', file, `paste-${Date.now()}.png`);
+    
+    fetch(`${API}/projects/${editId}/screenshot-upload`, {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        showToast('截图已粘贴上传');
+        // 只刷新截图列表，不重置表单
+        refreshScreenshotList(parseInt(editId));
+        refresh();
+      } else {
+        showToast(data.message || '上传失败', 'error');
+      }
+    })
+    .catch(() => showToast('上传请求失败', 'error'));
+    
+    break; // 只处理第一张图片
+  }
+});
 
 // ============ 启动 ============
 refresh();

@@ -448,32 +448,41 @@ body {
 }
 
 .card-url {
-  font-size: 12px;
-  line-height: 1.3;
-  color: var(--text-secondary); font-weight: 600;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #6366f1;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: 'Fira Code', monospace;
-  opacity: 0.9;
+  letter-spacing: -0.2px;
+  border: 1px dashed #c7d2fe;
+  border-radius: 4px;
+  padding: 2px 6px;
+  background: #eef2ff;
   transition: all var(--transition);
-  flex: 1;
-}{}
+}
 
 .project-card:hover .card-url {
-  opacity: 1;
   color: var(--primary);
-  
+  border-color: var(--primary);
+  background: var(--primary-glow);
 }
 
 .card-desc {
   font-size: 12px;
-  color: var(--text-muted); font-weight: 500;
+  color: var(--text-secondary);
+  font-weight: 400;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.3;
+  line-height: 1.4;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 4px 6px;
+  background: var(--bg);
 }
 
 .card-footer { 
@@ -865,6 +874,29 @@ form { padding: 24px; }
   font-weight: 700;
   background: rgba(0, 0, 0, 0.7);
   color: var(--primary);
+}
+
+/* 粘贴截图提示 */
+.screenshot-paste-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  transition: all var(--transition);
+  cursor: default;
+  grid-column: 1 / -1;
+}
+
+.screenshot-paste-hint:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-glow);
 }
 
 /* Lightbox */

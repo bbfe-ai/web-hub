@@ -4,6 +4,8 @@ const cors = require('cors');
 const Database = require('better-sqlite3');
 const puppeteer = require('puppeteer');
 
+const multer = require('multer');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -123,13 +125,16 @@ async function executeCapture(projectId, url) {
 
     try {
       await Promise.race([
-        page.goto(url, { waitUntil: 'domcontentloaded', timeout: 8000 }),
-        new Promise(resolve => setTimeout(resolve, 8000))
+        page.goto(url, { waitUntil: 'networkidle0', timeout: 15000 }),
+        new Promise(resolve => setTimeout(resolve, 15000))
       ]);
     } catch (navErr) {
       console.log(`⚠️  Navigation timeout for project ${projectId}, taking screenshot anyway`);
       writeLog('WARN', projectId, url, 'Navigation timeout, continuing');
     }
+
+    // 等待页面完全渲染
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     const screenshotBuf = await page.screenshot({ type: 'png' });
     await page.close();
@@ -350,6 +355,51 @@ app.get('/api/stats', (req, res) => {
 app.get('/api/categories', (req, res) => {
   const categories = db.prepare('SELECT DISTINCT category FROM projects ORDER BY category').all();
   res.json({ success: true, data: categories.map(c => c.category) });
+});
+
+// POST /api/projects/:id/screenshot-upload — upload pasted image as screenshot
+const upload = multer({ dest: screenshotsDir });
+app.post('/api/projects/:id/screenshot-upload', upload.single('screenshot'), (req, res) => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
+  if (!project) return res.status(404).json({ success: false, message: '项目不存在' });
+
+  const count = db.prepare('SELECT COUNT(*) as cnt FROM project_screenshots WHERE project_id = ?').get(req.params.id);
+  if (count.cnt >= 4) {
+    // 清理临时文件
+    try { fs.unlinkSync(req.file.path); } catch {}
+    return res.json({ success: false, message: '最多支持 4 张截图，请删除后再试' });
+  }
+
+  if (!req.file) {
+    return res.json({ success: false, message: '未接收到图片文件' });
+  }
+
+  // 重命名临时文件为正式文件名
+  const timestamp = Date.now();
+  const ext = path.extname(req.file.originalname) || '.png';
+  const filename = `project-${req.params.id}-${timestamp}${ext}`;
+  const filepath = path.join(screenshotsDir, filename);
+
+  try {
+    fs.renameSync(req.file.path, filepath);
+  } catch (err) {
+    try { fs.unlinkSync(req.file.path); } catch {}
+    return res.json({ success: false, message: '文件保存失败' });
+  }
+
+  const existing = db.prepare('SELECT COUNT(*) as cnt FROM project_screenshots WHERE project_id = ?').get(req.params.id);
+  const isThumb = existing.cnt === 0;
+  const publicPath = `/screenshots/${filename}`;
+
+  db.prepare(
+    'INSERT INTO project_screenshots (project_id, path, thumbnail) VALUES (?, ?, ?)'
+  ).run(req.params.id, publicPath, isThumb ? 1 : 0);
+
+  if (isThumb) {
+    db.prepare('UPDATE projects SET thumbnail = ? WHERE id = ?').run(publicPath, req.params.id);
+  }
+
+  res.json({ success: true, data: { path: publicPath }, message: '截图上传成功' });
 });
 
 app.get('/{*splat}', (req, res) => {
