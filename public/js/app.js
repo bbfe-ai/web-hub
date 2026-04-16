@@ -5,8 +5,27 @@ let currentView = 'grid';
 let currentIframeUrl = '';
 let currentProjectId = null;
 let currentProjectScreenshots = [];
+let quillEditor = null;
 
 const API = '/api';
+
+// Initialize Quill editor when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  quillEditor = new Quill('#projDescEditor', {
+    theme: 'snow',
+    placeholder: '详细描述（支持富文本）...',
+    modules: {
+      toolbar: [
+        ['bold', 'italic', 'underline', 'strike'],
+        ['blockquote', 'code-block'],
+        [{ 'header': 1 }, { 'header': 2 }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'color': [] }, { 'background': [] }],
+        ['clean']
+      ]
+    }
+  });
+});
 
 async function api(url, options = {}) {
   const res = await fetch(url, {
@@ -26,7 +45,6 @@ async function loadProjects() {
 
   const res = await api(`${API}/projects?${params}`);
   projects = res.data;
-  // Ensure screenshot_count field exists
   projects.forEach(p => {
     if (p.screenshot_count === undefined) p.screenshot_count = 0;
   });
@@ -113,12 +131,15 @@ function renderProjects() {
           <span>暂无预览</span>
         </div>`;
     } else if (count === 1) {
-      previewHtml = `<img src="${escapeHtml(paths[0] || p.thumbnail)}" alt="${escapeHtml(p.name)}预览" loading="lazy" class="card-preview-img">`;
+      previewHtml = `<img src="${escapeHtml(paths[0] || p.thumbnail)}" alt="${escapeHtml(p.name)}预览" loading="lazy" class="card-preview-img" data-lightbox="${escapeHtml(paths[0] || p.thumbnail)}">`;
     } else {
       const badge = count < 4 ? `<span class="screenshot-badge">${count}/4</span>` : `<span class="screenshot-badge full">满载</span>`;
+      const imgs = paths.slice(0, 4).map(s =>
+        `<img src="${escapeHtml(s)}" data-lightbox="${escapeHtml(s)}">`
+      ).join('');
       previewHtml = `
         <div class="card-preview-grid">
-          ${paths.slice(0, 4).map(s => `<img src="${escapeHtml(s)}">`).join('')}
+          ${imgs}
           ${badge}
         </div>`;
     }
@@ -138,11 +159,20 @@ function renderProjects() {
           <span class="card-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>
           ${p.category ? `<span class="card-category">${escapeHtml(p.category)}</span>` : ''}
         </div>
-        <div class="card-url" title="${escapeHtml(p.url)}">${escapeHtml(p.url)}</div>
-        ${p.description ? `<div class="card-desc">${escapeHtml(p.description)}</div>` : '<div class="card-desc"></div>'}
+        <div class="card-info-row">
+          <span class="card-info-label">地址:</span>
+          <span class="card-url" title="${escapeHtml(p.url)}">${escapeHtml(p.url)}</span>
+        </div>
+        ${p.description ? `
+        <div class="card-info-row">
+          <span class="card-info-label">描述:</span>
+          <span class="card-desc" title="${escapeHtml(stripHtml(p.description))}">${stripHtml(p.description)}</span>
+        </div>` : ''}
         <div class="card-footer">
           <span class="card-time">${formatTime(p.created_at)}</span>
           <div class="card-actions">
+            <button class="card-action-btn" onclick="event.stopPropagation();window.open('${escapeHtml(p.url)}', '_blank')" title="外部打开">外部打开</button>
+            <button class="card-action-btn" onclick="event.stopPropagation();showDetailModal(${p.id})" title="详情">详情</button>
             <button class="card-action-btn" onclick="event.stopPropagation();editProject(${p.id})" title="编辑">编辑</button>
             <button class="card-action-btn danger" onclick="event.stopPropagation();deleteProject(${p.id})" title="删除">删除</button>
           </div>
@@ -156,18 +186,11 @@ async function openProject(id) {
   const p = projects.find(x => x.id === id);
   if (!p) return;
 
-  currentProjectId = p.id;
-  currentIframeUrl = p.url;
-  document.getElementById('iframeName').textContent = p.name;
-  document.getElementById('iframeUrl').textContent = p.url;
-  document.getElementById('projectIframe').src = p.url;
-  updateScreenshotBtn(p);
-  document.getElementById('iframeOverlay').style.display = 'flex';
+  // 直接在新标签页打开，避免 iframe 嵌套限制
+  window.open(p.url, '_blank');
 
-  // Auto screenshot on first open only (server handles check)
   fetch(`${API}/projects/${id}/open`).catch(() => {});
 
-  // Poll for screenshot to refresh card (check every 2s for up to 12s)
   let polls = 0;
   const pollInterval = setInterval(async () => {
     polls++;
@@ -242,16 +265,28 @@ function openInNewTab() {
   if (currentIframeUrl) window.open(currentIframeUrl, '_blank');
 }
 
-function showAddModal() {
+function showAddModal(prefillUrl, prefillName, prefillDesc) {
   document.getElementById('editId').value = '';
   document.getElementById('modalTitle').textContent = '新增项目';
   document.getElementById('submitBtn').textContent = '保存';
   document.getElementById('projectForm').reset();
+  if (quillEditor) {
+    quillEditor.root.innerHTML = '';
+  }
   document.getElementById('addModal').style.display = 'flex';
+
+  // 支持预填充（拖拽导入时使用）
+  if (prefillUrl) document.getElementById('projUrl').value = prefillUrl;
+  if (prefillName) document.getElementById('projName').value = prefillName;
+  if (prefillDesc && quillEditor) {
+    quillEditor.clipboard.dangerouslyPasteHTML(prefillDesc);
+  }
 }
 
 function hideAddModal() {
   document.getElementById('addModal').style.display = 'none';
+  document.getElementById('screenshotSection').style.display = 'none';
+  document.getElementById('screenshotList').innerHTML = '';
 }
 
 async function editProject(id) {
@@ -265,8 +300,27 @@ async function editProject(id) {
   document.getElementById('projUser').value = p.username;
   document.getElementById('projPass').value = p.password;
   document.getElementById('projCategory').value = p.category;
-  document.getElementById('projDesc').value = p.description;
+  if (quillEditor) {
+    quillEditor.root.innerHTML = p.description || '';
+  }
   document.getElementById('addModal').style.display = 'flex';
+
+  // Load screenshots
+  const screenshots = await api(`${API}/projects/${id}/screenshots`);
+  const section = document.getElementById('screenshotSection');
+  const list = document.getElementById('screenshotList');
+  if (screenshots.data && screenshots.data.length > 0) {
+    section.style.display = 'block';
+    list.innerHTML = screenshots.data.map(s => `
+      <div class="screenshot-item" id="ss-${s.id}">
+        <img src="${escapeHtml(s.path)}" alt="截图">
+        <span class="screenshot-badge">${s.thumbnail ? '主图' : ''}</span>
+        <button class="screenshot-delete-btn" onclick="deleteScreenshot(${s.id}, ${p.id})" title="删除截图">✕</button>
+      </div>
+    `).join('');
+  } else {
+    section.style.display = 'none';
+  }
 }
 
 async function handleSubmit(e) {
@@ -278,7 +332,7 @@ async function handleSubmit(e) {
     username: document.getElementById('projUser').value.trim(),
     password: document.getElementById('projPass').value,
     category: document.getElementById('projCategory').value.trim() || '默认',
-    description: document.getElementById('projDesc').value.trim(),
+    description: quillEditor ? quillEditor.root.innerHTML : '',
   };
 
   if (id) {
@@ -300,6 +354,28 @@ async function deleteProject(id) {
   refresh();
 }
 
+async function deleteScreenshot(screenshotId, projectId) {
+  if (!confirm('确定要删除此截图吗？')) return;
+  await api(`${API}/projects/${projectId}/screenshot/${screenshotId}`, { method: 'DELETE' });
+  showToast('截图已删除');
+  // Refresh screenshot list
+  const screenshots = await api(`${API}/projects/${projectId}/screenshots`);
+  const section = document.getElementById('screenshotSection');
+  const list = document.getElementById('screenshotList');
+  if (screenshots.data && screenshots.data.length > 0) {
+    list.innerHTML = screenshots.data.map(s => `
+      <div class="screenshot-item" id="ss-${s.id}">
+        <img src="${escapeHtml(s.path)}" alt="截图">
+        <span class="screenshot-badge">${s.thumbnail ? '主图' : ''}</span>
+        <button class="screenshot-delete-btn" onclick="deleteScreenshot(${s.id}, ${projectId})" title="删除截图">✕</button>
+      </div>
+    `).join('');
+  } else {
+    section.style.display = 'none';
+  }
+  refresh();
+}
+
 function showDetailModal(id) {
   const p = projects.find(x => x.id === id);
   if (!p) return;
@@ -310,7 +386,10 @@ function showDetailModal(id) {
     <div class="detail-row"><span class="detail-label">用户名</span><span class="detail-value">${p.username ? escapeHtml(p.username) : '-'}</span></div>
     <div class="detail-row"><span class="detail-label">密码</span><span class="detail-value">${p.password ? '••••••••' : '-'}</span></div>
     <div class="detail-row"><span class="detail-label">分类</span><span class="detail-value">${p.category ? escapeHtml(p.category) : '-'}</span></div>
-    <div class="detail-row"><span class="detail-label">描述</span><span class="detail-value">${p.description ? escapeHtml(p.description) : '-'}</span></div>
+    <div class="detail-row" style="flex-direction: column; align-items: flex-start; border-bottom: none;">
+      <span class="detail-label" style="width: 100%; margin-bottom: 8px;">描述</span>
+      <div class="detail-value rich-text" style="width: 100%;">${p.description || '-'}</div>
+    </div>
     <div class="detail-row"><span class="detail-label">创建时间</span><span class="detail-value">${formatTime(p.created_at)}</span></div>
     <div class="detail-actions">
       <button class="btn btn-primary" onclick="hideDetailModal();openProject(${p.id})">打开项目</button>
@@ -343,9 +422,75 @@ function showToast(msg, type = 'success') {
   setTimeout(() => el.remove(), 3000);
 }
 
+// ============ 预览大图 (Lightbox) ============
+
+function initLightbox() {
+  const grid = document.getElementById('projectsGrid');
+  let currentCardPreview = null;
+  
+  // 使用 mouseover/mouseout 进行事件委托
+  grid.addEventListener('mouseover', function(e) {
+    // 从事件目标向上查找 .card-preview 容器
+    const cardPreview = e.target.closest('.card-preview');
+    
+    // 如果进入了一个新的 card-preview
+    if (cardPreview && cardPreview !== currentCardPreview) {
+      currentCardPreview = cardPreview;
+      
+      // 查找当前卡片内的所有带 data-lightbox 的图片
+      const lightboxImgs = cardPreview.querySelectorAll('[data-lightbox]');
+      if (lightboxImgs.length === 0) return;
+      
+      // 如果是单张图片，直接显示
+      if (lightboxImgs.length === 1) {
+        const src = lightboxImgs[0].getAttribute('data-lightbox');
+        if (src) {
+          document.getElementById('lightboxImg').src = src;
+          document.getElementById('lightboxOverlay').style.display = 'flex';
+        }
+      } else {
+        // 多张图片时，显示第一张（或可以根据需求调整）
+        const firstSrc = lightboxImgs[0].getAttribute('data-lightbox');
+        if (firstSrc) {
+          document.getElementById('lightboxImg').src = firstSrc;
+          document.getElementById('lightboxOverlay').style.display = 'flex';
+        }
+      }
+    }
+  });
+
+  grid.addEventListener('mouseout', function(e) {
+    const cardPreview = e.target.closest('.card-preview');
+    if (!cardPreview) return;
+    
+    // 检查鼠标是否真的离开了 card-preview 区域
+    const relatedTarget = e.relatedTarget;
+    if (!cardPreview.contains(relatedTarget)) {
+      currentCardPreview = null;
+      document.getElementById('lightboxOverlay').style.display = 'none';
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initLightbox();
+});
+
 function escapeHtml(str) {
   if (!str) return '';
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// 从HTML字符串中提取纯文本
+function stripHtml(html) {
+  if (!html) return '';
+  // 创建一个临时div元素来解析HTML
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  // 获取纯文本内容
+  const text = tmp.textContent || tmp.innerText || '';
+  // 去除多余空白并限制长度
+  return text.trim().substring(0, 100);
 }
 
 function formatTime(ts) {
@@ -360,55 +505,88 @@ function formatTime(ts) {
   return d.toLocaleDateString('zh-CN');
 }
 
+// ============ 键盘快捷键 ============
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     hideAddModal();
     hideDetailModal();
     hideIframe();
+    document.getElementById('lightboxOverlay').style.display = 'none';
   }
 });
 
-let dragCounter = 0;
-const dragOverlay = document.getElementById('dragOverlay');
+// ============ 拖拽导入网页功能 ============
+(function initDragDrop() {
+  var dragCounter = 0;
+  var overlay = document.getElementById('dragOverlay');
 
-document.addEventListener('dragenter', e => {
-  e.preventDefault();
-  dragCounter++;
-  if (dragOverlay) dragOverlay.style.display = 'flex';
-});
-
-document.addEventListener('dragover', e => {
-  e.preventDefault();
-});
-
-document.addEventListener('dragleave', e => {
-  e.preventDefault();
-  dragCounter--;
-  if (dragCounter === 0 && dragOverlay) {
-    dragOverlay.style.display = 'none';
+  // 阻止浏览器默认拖拽行为（打开链接）
+  function prevent(e) {
+    e.preventDefault();
+    e.stopPropagation();
   }
-});
 
-document.addEventListener('drop', e => {
-  e.preventDefault();
-  dragCounter = 0;
-  if (dragOverlay) dragOverlay.style.display = 'none';
-  console.log('Drop event triggered:', e.dataTransfer);
-  const data = e.dataTransfer.getData('URL') || e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text');
-  console.log('Extracted drag data:', data);
-  if (data) {
-    try {
-      const url = new URL(data);
-      if (url.protocol === 'http:' || url.protocol === 'https:') {
-        showAddModal();
-        document.getElementById('projUrl').value = url.href;
-        document.getElementById('projName').value = url.hostname;
-        showToast('已解析拖拽链接');
-      }
-    } catch (err) {
-      console.warn('拖拽的数据不是有效的URL:', data);
+  document.addEventListener('dragenter', function(e) {
+    prevent(e);
+    dragCounter++;
+    if (overlay) overlay.classList.add('active');
+  }, false);
+
+  document.addEventListener('dragover', function(e) {
+    prevent(e);
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  }, false);
+
+  document.addEventListener('dragleave', function(e) {
+    prevent(e);
+    dragCounter--;
+    if (dragCounter <= 0) {
+      dragCounter = 0;
+      if (overlay) overlay.classList.remove('active');
     }
-  }
-});
+  }, false);
 
+  document.addEventListener('drop', function(e) {
+    prevent(e);
+    dragCounter = 0;
+    if (overlay) overlay.classList.remove('active');
+
+    if (!e.dataTransfer) return;
+
+    // 尝试多种方式获取拖拽的URL
+    var rawData = '';
+    try { rawData = e.dataTransfer.getData('URL'); } catch(ex) {}
+    if (!rawData) try { rawData = e.dataTransfer.getData('text/uri-list'); } catch(ex) {}
+    if (!rawData) try { rawData = e.dataTransfer.getData('text/plain'); } catch(ex) {}
+    if (!rawData) try { rawData = e.dataTransfer.getData('text'); } catch(ex) {}
+
+    if (!rawData || !rawData.trim()) return;
+
+    // 从数据中提取URL
+    var lines = rawData.trim().split('\n');
+    var foundUrl = '';
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (line.match(/^https?:\/\//i)) {
+        foundUrl = line;
+        break;
+      }
+    }
+
+    if (!foundUrl) return;
+
+    try {
+      var urlObj = new URL(foundUrl);
+      if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') return;
+
+      var name = urlObj.hostname.replace(/^www\./, '');
+      showAddModal(urlObj.href, name, '');
+      showToast('已识别拖拽链接，请补充信息后保存');
+    } catch(ex) {
+      // 不是有效URL，忽略
+    }
+  }, false);
+})();
+
+// ============ 启动 ============
 refresh();
