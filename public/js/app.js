@@ -578,6 +578,17 @@ document.addEventListener('keydown', e => {
 
     if (!e.dataTransfer) return;
 
+    // 调试：列出所有可用的数据类型
+    if (e.dataTransfer.types && e.dataTransfer.types.length > 0) {
+      console.log('[DragDrop] types:', e.dataTransfer.types);
+      for (var t = 0; t < e.dataTransfer.types.length; t++) {
+        try {
+          var val = e.dataTransfer.getData(e.dataTransfer.types[t]);
+          console.log('[DragDrop] ' + e.dataTransfer.types[t] + ' =', val ? val.substring(0, 200) : '(empty)');
+        } catch(ex) {}
+      }
+    }
+
     // 尝试多种方式获取拖拽的URL
     var rawData = '';
     try { rawData = e.dataTransfer.getData('URL'); } catch(ex) {}

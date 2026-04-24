@@ -1,0 +1,31 @@
+services:
+  webhub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webhub
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      # Puppeteer 配置（如果需要调整）
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+    volumes:
+      # 持久化数据库文件
+      - ./data:/app/data
+      # 持久化截图文件
+      - ./public/screenshots:/app/public/screenshots
+    restart: unless-stopped
+    # 资源限制（可选，根据服务器配置调整）
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
