@@ -296,6 +296,13 @@ function showAddModal(prefillUrl, prefillName, prefillDesc) {
   document.getElementById('modalTitle').textContent = '新增项目';
   document.getElementById('submitBtn').textContent = '保存';
   document.getElementById('projectForm').reset();
+  // 重置密码可见性
+  const passInput = document.getElementById('projPass');
+  const passBtn = passInput?.parentElement.querySelector('.password-toggle-btn');
+  if (passInput && passBtn) {
+    passInput.type = 'password';
+    passBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  }
   if (quillEditor) {
     quillEditor.root.innerHTML = '';
   }
@@ -315,6 +322,31 @@ function hideAddModal() {
   document.getElementById('screenshotList').innerHTML = '';
 }
 
+function toggleEditPassword(btn) {
+  const input = btn.parentElement.querySelector('input');
+  if (!input) return;
+  const isPassword = input.type === 'password';
+  input.type = isPassword ? 'text' : 'password';
+  btn.innerHTML = isPassword
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+
+function toggleDetailPassword(btn) {
+  const span = btn.previousElementSibling;
+  if (!span) return;
+  const isHidden = span.dataset.hidden === 'true';
+  if (isHidden) {
+    span.textContent = span.dataset.password || '';
+    span.dataset.hidden = 'false';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  } else {
+    span.textContent = '••••••••';
+    span.dataset.hidden = 'true';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  }
+}
+
 async function editProject(id) {
   const res = await api(`${API}/projects/${id}`);
   const p = res.data;
@@ -325,6 +357,13 @@ async function editProject(id) {
   document.getElementById('projUrl').value = p.url;
   document.getElementById('projUser').value = p.username;
   document.getElementById('projPass').value = p.password;
+  // 重置密码可见性
+  const passInput = document.getElementById('projPass');
+  const passBtn = passInput?.parentElement.querySelector('.password-toggle-btn');
+  if (passInput && passBtn) {
+    passInput.type = 'password';
+    passBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  }
   document.getElementById('projCategory').value = p.category;
   if (quillEditor) {
     quillEditor.root.innerHTML = p.description || '';
@@ -416,7 +455,7 @@ function showDetailModal(id) {
     <div class="detail-row"><span class="detail-label">名称</span><span class="detail-value">${escapeHtml(p.name)}</span></div>
     <div class="detail-row"><span class="detail-label">地址</span><span class="detail-value"><a href="${escapeHtml(p.url)}" target="_blank" style="color:var(--primary)">${escapeHtml(p.url)}</a></span></div>
     <div class="detail-row"><span class="detail-label">用户名</span><span class="detail-value">${p.username ? escapeHtml(p.username) : '-'}</span></div>
-    <div class="detail-row"><span class="detail-label">密码</span><span class="detail-value">${p.password ? '••••••••' : '-'}</span></div>
+    <div class="detail-row"><span class="detail-label">密码</span><span class="detail-value" style="display:flex;align-items:center;gap:8px;"><span data-hidden="true" data-password="${escapeHtml(p.password)}">${p.password ? '••••••••' : '-'}</span>${p.password ? `<button class="password-toggle-btn" onclick="toggleDetailPassword(this)" title="显示/隐藏密码"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}</span></div>
     <div class="detail-row"><span class="detail-label">分类</span><span class="detail-value">${p.category ? escapeHtml(p.category) : '-'}</span></div>
     <div class="detail-row" style="flex-direction: column; align-items: flex-start; border-bottom: none;">
       <span class="detail-label" style="width: 100%; margin-bottom: 8px;">描述</span>
