@@ -24,7 +24,7 @@ COPY . .
 COPY --from=builder /app/node_modules ./node_modules
 
 # 创建必要目录并设置权限
-RUN mkdir -p /app/data /app/public/screenshots && \
+RUN mkdir -p /app/data && \
     chmod -R 755 /app
 
 EXPOSE 3000
