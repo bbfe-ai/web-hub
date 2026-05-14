@@ -688,6 +688,7 @@ graph LR
 - ✅ **[开源准备清单](docs/OPEN_SOURCE_CHECKLIST.md)** - GitHub 开源完整检查清单和推广建议
 - 🐳 **[Docker 部署指南](docs/DOCKER.md)** - Docker 容器化部署详细说明
 - 📋 **[Docker 快速参考](docs/DOCKER_QUICK_REFERENCE.md)** - Docker 常用命令速查
+- 🚀 **[版本发布指南](docs/RELEASE_GUIDE.md)** - 如何创建和发布新版本
 - 📝 **[文档迁移说明](docs/MIGRATION.md)** - 文档结构重组的详细说明
 
 ---
