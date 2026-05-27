@@ -439,9 +439,11 @@ function renderCard(p) {
         ${tipsHtml}
         ${p.description ? `<span class="card-desc" title="${escapeHtml(stripHtml(p.description))}">${stripHtml(p.description)}</span>` : ''}
         <div class="card-footer">
-          <span class="card-time">${formatTime(p.created_at)}</span>
-          ${author}
-          <span class="card-click-count" title="点击次数">${p.click_count || 0} 次</span>
+          <div class="card-meta">
+            <span class="card-time">${formatTime(p.created_at)}</span>
+            ${author}
+            <span class="card-click-count" title="点击次数">${p.click_count || 0} 次</span>
+          </div>
           <div class="card-actions">
             <button class="card-action-btn" onclick="event.stopPropagation();showQrModal(${p.id})" title="二维码">📱</button>
             <button class="card-action-btn" onclick="event.stopPropagation();showDetailModal(${p.id})" title="详情">详情</button>

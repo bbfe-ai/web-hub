@@ -59,3 +59,23 @@ snap-*.md
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# 文档与设计文件（无需进镜像）
+docs/
+CHANGELOG.md
+
+# Playwright / 测试截图
+.playwright-mcp/
+*.png
+snap-*.md
+
+# 记忆与日志
+.remember/
+memory/
+*.log
+
+# 旧版/备份文件
+*.bak
+*.old
+*.tar
+*.tar.gz
