@@ -1,0 +1,9 @@
+{
+  "teamName": "我的团队",
+  "welcomeMessage": "团队工具墙",
+  "showWhoAdded": true,
+  "compactViewByDefault": false,
+  "newThresholdDays": 7,
+  "healthCheckIntervalHours": 24,
+  "screenshotRefreshIntervalDays": 7
+}

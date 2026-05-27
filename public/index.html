@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebHub - 项目管理中心</title>
+  <title>WebHub - 团队工具墙</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -16,24 +16,37 @@
       <div class="header-container">
         <div class="header-left">
           <h1 class="logo">⚡ WebHub</h1>
-          <span class="subtitle">项目管理中心</span>
+          <span class="subtitle" id="teamSubtitle">团队工具墙</span>
         </div>
         <div class="header-right">
-          <div class="view-toggle" style="margin-right: 8px;">
-            <button class="view-btn active" onclick="setView('grid')" id="gridBtn" title="网格视图">
+          <div class="team-stats" id="teamStats" title="团队动态"></div>
+          <div class="view-toggle">
+            <button class="view-btn active" onclick="setView('grid')" id="gridBtn" title="网格视图 (G)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
             </button>
-            <button class="view-btn" onclick="setView('list')" id="listBtn" title="列表视图">
+            <button class="view-btn" onclick="setView('list')" id="listBtn" title="列表视图 (G)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            </button>
+            <button class="view-btn" onclick="setView('compact')" id="compactBtn" title="紧凑视图 (G)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
             </button>
           </div>
           <div class="search-box">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" id="searchInput" placeholder="搜索项目..." oninput="handleSearch()">
+            <input type="text" id="searchInput" placeholder="搜索 (按 / 聚焦)..." oninput="handleSearch()">
+            <kbd class="search-hint">/</kbd>
           </div>
+          <button class="btn btn-ghost" onclick="showBatchModal()" title="批量添加">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            批量
+          </button>
           <button class="btn btn-primary" onclick="showAddModal()">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
             新增项目
+          </button>
+          <button class="user-btn" id="userBtn" onclick="changeUserName()" title="点击设置昵称">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span id="userBtnLabel">访客</span>
           </button>
         </div>
       </div>
@@ -45,21 +58,55 @@
 
     <div class="layout-container">
       <aside class="sidebar">
-        <div class="category-tabs" id="categoryTabs"></div>
+        <div class="sidebar-section">
+          <div class="sidebar-title">分类</div>
+          <div class="category-tabs" id="categoryTabs"></div>
+        </div>
+        <div class="sidebar-section" id="tagSection" style="display:none">
+          <div class="sidebar-title">标签</div>
+          <div class="tag-list" id="tagList"></div>
+        </div>
+        <div class="sidebar-section" id="activitySection">
+          <div class="sidebar-title">最近动态</div>
+          <div class="activity-feed" id="activityFeed"></div>
+        </div>
       </aside>
 
       <div class="main-wrapper">
         <main class="main-content">
-          <div class="projects-grid" id="projectsGrid"></div>
-          <div class="empty-state" id="emptyState" style="display:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64" height="64"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            <h3>暂无项目</h3>
-            <p>点击「新增项目」添加你的第一个 Web 项目</p>
-          </div>
+          <section class="hot-section" id="hotSection" style="display:none">
+            <div class="section-header">
+              <h2 class="section-title">🔥 最近热门</h2>
+              <span class="section-hint">基于近 30 天点击</span>
+            </div>
+            <div class="hot-list" id="hotList"></div>
+          </section>
+
+          <section class="favorites-section" id="favoritesSection" style="display:none">
+            <div class="section-header">
+              <h2 class="section-title">⭐ 我常用</h2>
+              <span class="section-hint">基于本机点击记录</span>
+            </div>
+            <div class="favorites-list" id="favoritesList"></div>
+          </section>
+
+          <section class="projects-section">
+            <div class="section-header">
+              <h2 class="section-title" id="projectsTitle">全部项目</h2>
+              <span class="section-hint" id="projectsCount"></span>
+            </div>
+            <div class="projects-grid" id="projectsGrid"></div>
+            <div class="empty-state" id="emptyState" style="display:none">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64" height="64"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              <h3>暂无项目</h3>
+              <p>点击「新增项目」添加你的第一个 Web 项目</p>
+            </div>
+          </section>
         </main>
       </div>
     </div>
 
+    <!-- 新增/编辑 -->
     <div class="modal-overlay" id="addModal" style="display:none" onclick="if(event.target===this)hideAddModal()">
       <div class="modal">
         <div class="modal-header">
@@ -73,7 +120,9 @@
             <input type="text" id="projName" required placeholder="例如：内部管理系统">
           </div>
           <div class="form-group">
-            <label for="projUrl">项目地址 <span class="required">*</span></label>
+            <label for="projUrl">项目地址 <span class="required">*</span>
+              <button type="button" class="mini-btn" onclick="autoFetchMeta()" title="从 URL 自动抓取标题和图标">🔮 自动填充</button>
+            </label>
             <input type="url" id="projUrl" required placeholder="https://example.com">
           </div>
           <div class="form-row">
@@ -97,6 +146,14 @@
               <input type="text" id="projCategory" placeholder="例如：内部系统" list="categoryList">
               <datalist id="categoryList"></datalist>
             </div>
+            <div class="form-group">
+              <label for="projTags">标签 <span class="hint-text">(逗号分隔，多个标签)</span></label>
+              <input type="text" id="projTags" placeholder="例如：AI, 实验, 内部">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="projTips">小贴士 <span class="hint-text">(踩坑提示、使用须知)</span></label>
+            <input type="text" id="projTips" placeholder="例如：需先连 VPN / 使用企业邮箱登录">
           </div>
           <div class="form-group" id="screenshotSection" style="display:none">
             <label>截图预览</label>
@@ -114,6 +171,33 @@
       </div>
     </div>
 
+    <!-- 批量添加 -->
+    <div class="modal-overlay" id="batchModal" style="display:none" onclick="if(event.target===this)hideBatchModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>批量添加项目</h2>
+          <button class="close-btn" onclick="hideBatchModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="hint-text" style="margin-bottom: 12px;">每行一个 URL，系统会自动抓取标题、描述和图标。已存在的 URL 会跳过。</p>
+          <div class="form-group">
+            <label for="batchCategory">分类（统一应用）</label>
+            <input type="text" id="batchCategory" placeholder="例如：内部系统" list="categoryList">
+          </div>
+          <div class="form-group">
+            <label for="batchUrls">URL 列表 <span class="required">*</span></label>
+            <textarea id="batchUrls" rows="10" placeholder="https://example.com&#10;https://docs.example.com&#10;https://github.com/team/repo"></textarea>
+          </div>
+          <div id="batchResult" class="batch-result"></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" onclick="hideBatchModal()">取消</button>
+          <button type="button" class="btn btn-primary" id="batchSubmitBtn" onclick="submitBatch()">开始导入</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 详情 -->
     <div class="modal-overlay" id="detailModal" style="display:none" onclick="if(event.target===this)hideDetailModal()">
       <div class="modal modal-detail">
         <div class="modal-header">
@@ -121,6 +205,41 @@
           <button class="close-btn" onclick="hideDetailModal()">✕</button>
         </div>
         <div class="detail-body" id="detailBody"></div>
+      </div>
+    </div>
+
+    <!-- QR 分享 -->
+    <div class="modal-overlay" id="qrModal" style="display:none" onclick="if(event.target===this)hideQrModal()">
+      <div class="modal modal-qr">
+        <div class="modal-header">
+          <h2>📱 扫码访问</h2>
+          <button class="close-btn" onclick="hideQrModal()">✕</button>
+        </div>
+        <div class="qr-body">
+          <div id="qrCanvas"></div>
+          <div class="qr-info">
+            <div class="qr-name" id="qrName"></div>
+            <div class="qr-url" id="qrUrl"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 设置昵称 -->
+    <div class="modal-overlay" id="userModal" style="display:none" onclick="if(event.target===this)hideUserModal()">
+      <div class="modal modal-small">
+        <div class="modal-header">
+          <h2>👋 设置你的昵称</h2>
+          <button class="close-btn" onclick="hideUserModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="hint-text" style="margin-bottom: 12px;">用于在卡片上标记"谁加的/谁改的"。仅保存在本机，不需要注册账号。</p>
+          <input type="text" id="userNameInput" placeholder="例如：林伟 / Lin" maxlength="32" autofocus>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" onclick="hideUserModal()">取消</button>
+          <button type="button" class="btn btn-primary" onclick="saveUserName()">保存</button>
+        </div>
       </div>
     </div>
 
@@ -158,9 +277,19 @@
         <span>松开鼠标，立即添加项目</span>
       </div>
     </div>
+
+    <div class="shortcut-help" id="shortcutHelp">
+      <div class="shortcut-row"><kbd>/</kbd> 聚焦搜索</div>
+      <div class="shortcut-row"><kbd>G</kbd> 切换视图</div>
+      <div class="shortcut-row"><kbd>1-9</kbd> 切换分类</div>
+      <div class="shortcut-row"><kbd>N</kbd> 新增项目</div>
+      <div class="shortcut-row"><kbd>?</kbd> 显示帮助</div>
+      <div class="shortcut-row"><kbd>Esc</kbd> 关闭弹窗</div>
+    </div>
   </div>
 
   <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script src="/js/app.js"></script>
 </body>
 </html>
