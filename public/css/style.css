@@ -543,10 +543,13 @@ body {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--text-muted); font-weight: 600;
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all var(--transition);
 }
 

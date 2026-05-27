@@ -903,30 +903,54 @@ function showToast(msg, type = 'success') {
 function initLightbox() {
   const grid = document.getElementById('projectsGrid');
   let currentCardPreview = null;
+  let currentSrc = null;
   let lightboxTimer = null;
+
+  function showLightbox(src) {
+    if (!src || src === currentSrc) return;
+    currentSrc = src;
+    const img = document.getElementById('lightboxImg');
+    const overlay = document.getElementById('lightboxOverlay');
+    img.src = src;
+    overlay.style.display = 'flex';
+  }
+
+  function hideLightbox() {
+    document.getElementById('lightboxOverlay').style.display = 'none';
+    currentSrc = null;
+  }
+
   grid.addEventListener('mouseover', function(e) {
     const cardPreview = e.target.closest('.card-preview');
-    if (cardPreview && cardPreview !== currentCardPreview) {
+    if (!cardPreview) return;
+
+    // 鼠标所在的具体那张缩略图
+    const hoveredImg = e.target.closest('[data-lightbox]');
+    const src = hoveredImg ? hoveredImg.getAttribute('data-lightbox') : null;
+
+    if (cardPreview !== currentCardPreview) {
+      // 切换到新卡片：延迟 400ms 展示，避免一划而过就弹
       clearTimeout(lightboxTimer);
       currentCardPreview = cardPreview;
-      const lightboxImgs = cardPreview.querySelectorAll('[data-lightbox]');
-      if (lightboxImgs.length === 0) return;
+      const firstImg = cardPreview.querySelector('[data-lightbox]');
+      if (!firstImg) return;
+      const targetSrc = src || firstImg.getAttribute('data-lightbox');
       lightboxTimer = setTimeout(() => {
-        const src = lightboxImgs[0].getAttribute('data-lightbox');
-        if (src && currentCardPreview === cardPreview) {
-          document.getElementById('lightboxImg').src = src;
-          document.getElementById('lightboxOverlay').style.display = 'flex';
-        }
+        if (currentCardPreview === cardPreview) showLightbox(targetSrc);
       }, 400);
+    } else if (src && document.getElementById('lightboxOverlay').style.display === 'flex') {
+      // 同一卡片内移动到另一张缩略图：立即切换，无延迟
+      showLightbox(src);
     }
   });
+
   grid.addEventListener('mouseout', function(e) {
     const cardPreview = e.target.closest('.card-preview');
     if (!cardPreview) return;
     if (!cardPreview.contains(e.relatedTarget)) {
       clearTimeout(lightboxTimer);
       currentCardPreview = null;
-      document.getElementById('lightboxOverlay').style.display = 'none';
+      hideLightbox();
     }
   });
 }
