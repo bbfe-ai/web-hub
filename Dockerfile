@@ -16,7 +16,7 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# 安装 Chromium + 中文字体，供 Puppeteer 截图使用
+# 安装 Chromium + 精简中文字体（文泉驿正黑，~12MB）
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -24,7 +24,7 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
-    font-noto-cjk
+    wqy-zenhei
 
 # 使用系统 Chromium，跳过 Puppeteer 自带下载
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \

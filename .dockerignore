@@ -1,33 +1,54 @@
 # 依赖目录
 node_modules/
 
-# 数据文件（运行时生成）
+# 运行时生成的数据（SQLite、截图、日志）
 data/
-
-# 截图文件（运行时生成）
 public/screenshots/
+logs/
+*.log
 
 # 环境变量文件（可能包含敏感信息）
 .env
+.env.*
 
-# Git
+# Git / GitHub
 .git/
 .gitignore
+.github/
 
-# Docker
+# Docker 自身配置（镜像内无需再嵌套）
 Dockerfile
 .dockerignore
+docker-compose.yml
+docker-compose.*.yml
+docker-start.bat
+docker-start.sh
 
-# 文档
+# 文档（不进运行镜像）
 README.md
+CHANGELOG.md
+docs/
 
-# 测试文件
+# 测试与维护脚本
 test-*.js
 test-*.py
 cleanup.js
-
-# 脚本文件（Docker 内不需要）
 scripts/
+
+# 根目录临时产物（截图、快照）
+*.png
+*.jpg
+*.jpeg
+snap-*.md
+
+# 镜像导出包
+*.tar
+*.tar.gz
+
+# Claude / 浏览器测试产物
+.claude/
+.remember/
+.playwright-mcp/
 
 # IDE
 .vscode/
