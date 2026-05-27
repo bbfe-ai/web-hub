@@ -82,6 +82,21 @@ db.exec(`
   )
 `);
 
+// 回填 last_screenshot_at：避免老数据被 cron 误判为"待刷新"反复加截图
+try {
+  const backfill = db.prepare(`
+    UPDATE projects
+    SET last_screenshot_at = (
+      SELECT MAX(created_at) FROM project_screenshots WHERE project_id = projects.id
+    )
+    WHERE last_screenshot_at IS NULL
+      AND EXISTS (SELECT 1 FROM project_screenshots WHERE project_id = projects.id)
+  `).run();
+  if (backfill.changes > 0) {
+    console.log(`✓ 迁移：已回填 ${backfill.changes} 个项目的 last_screenshot_at`);
+  }
+} catch (e) { console.log('⚠️  last_screenshot_at 回填失败：', e.message); }
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -737,10 +752,13 @@ app.listen(PORT, () => {
   const screenshotIntervalMs = (teamConfig.screenshotRefreshIntervalDays || 7) * 24 * 3600 * 1000;
   setInterval(async () => {
     const since = new Date(Date.now() - screenshotIntervalMs).toISOString();
+    // 仅刷新「已经有截图 + 最后截图时间早于刷新周期」的项目；
+    // 0 张的项目交给「打开时自动截图」处理，避免空项目被反复打扰
     const stale = db.prepare(`
       SELECT p.id, p.url FROM projects p
-      WHERE (p.last_screenshot_at IS NULL OR p.last_screenshot_at < ?)
-        AND (SELECT COUNT(*) FROM project_screenshots WHERE project_id = p.id) < 4
+      WHERE p.last_screenshot_at IS NOT NULL
+        AND p.last_screenshot_at < ?
+        AND (SELECT COUNT(*) FROM project_screenshots WHERE project_id = p.id) BETWEEN 1 AND 3
       LIMIT 5
     `).all(since);
     for (const p of stale) {
