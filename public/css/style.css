@@ -411,11 +411,13 @@ body {
   overflow: hidden;
 }
 
-.card-header { 
-  display: flex; 
-  align-items: center; 
-  justify-content: space-between; 
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 6px;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .card-name {
@@ -426,7 +428,11 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   letter-spacing: 0.3px;
   transition: all var(--transition);
 }
@@ -487,9 +493,8 @@ body {
 
 .card-footer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
   gap: 6px;
   margin-top: auto;
   padding-top: 6px;
@@ -519,7 +524,10 @@ body {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  margin-left: auto;
+  justify-content: flex-end;
+  margin-left: 0;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border-light);
 }
 
 .card-meta {
@@ -1573,13 +1581,17 @@ form { padding: 24px; }
   border-radius: 8px;
 }
 
+/* 高分屏限制最多 4 列，避免卡片过窄导致标题被分类标签遮挡、底栏按钮溢出 */
 .projects-grid.view-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(max(300px, calc((100% - 48px) / 4)), 1fr));
   gap: 16px;
 }
-@media (min-width: 1400px) {
+@media (max-width: 1100px) {
   .projects-grid.view-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+}
+@media (max-width: 720px) {
+  .projects-grid.view-grid { grid-template-columns: 1fr; }
 }
 
 .mini-btn {

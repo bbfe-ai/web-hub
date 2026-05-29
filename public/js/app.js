@@ -616,6 +616,11 @@ function hideAddModal() {
   document.getElementById('addModal').style.display = 'none';
   document.getElementById('screenshotSection').style.display = 'none';
   document.getElementById('screenshotList').innerHTML = '';
+  // 编辑过程中如有删除截图/上传截图等"局部刷新"操作，关闭模态时统一同步外层列表
+  if (window._webhubDirty) {
+    window._webhubDirty = false;
+    refresh();
+  }
 }
 
 async function autoFetchMeta() {
@@ -796,10 +801,26 @@ async function refreshScreenshotList(projectId) {
 
 async function deleteScreenshot(screenshotId, projectId) {
   if (!confirm('确定要删除此截图吗？')) return;
-  await api(`${API}/projects/${projectId}/screenshot/${screenshotId}`, { method: 'DELETE' });
-  showToast('截图已删除');
-  refreshScreenshotList(projectId);
-  refresh();
+  try {
+    await api(`${API}/projects/${projectId}/screenshot/${screenshotId}`, { method: 'DELETE' });
+    showToast('截图已删除');
+    // 关键：编辑模态保持打开，只刷新当前模态内的截图列表
+    // 直接 DOM 移除目标项，避免重拉 API 触发任何副作用
+    const item = document.getElementById(`ss-${screenshotId}`);
+    if (item) item.remove();
+    // 若全部删完则显示粘贴提示
+    const list = document.getElementById('screenshotList');
+    if (list && !list.querySelector('.screenshot-item')) {
+      list.innerHTML = `<div class="screenshot-paste-hint">📋 在此页面按 Ctrl+V 粘贴截图（最多4张）</div>`;
+    }
+    // 同步更新本地卡片的 screenshot_count，不重渲染整个网格、不动模态
+    const p = projects.find(x => x.id === projectId);
+    if (p && p.screenshot_count > 0) p.screenshot_count -= 1;
+    // 标记一次"懒刷新"——下次关闭模态时再同步外层列表
+    window._webhubDirty = true;
+  } catch (e) {
+    showToast('删除失败: ' + (e.message || '未知错误'), 'error');
+  }
 }
 
 // ============ 详情 ============
