@@ -373,13 +373,13 @@ body {
   opacity: 1;
 }
 
-/* Always show overlay for single image */
+/* 单张截图时默认隐藏 overlay，hover 才显示提示图标，避免遮挡截图内容 */
 .card-preview-img ~ .card-preview-overlay {
-  opacity: 0.5;
+  opacity: 0;
 }
 
 .project-card:hover .card-preview-img ~ .card-preview-overlay {
-  opacity: 0.8;
+  opacity: 0.6;
 }
 
 /* Hide entire overlay when grid screenshots exist */
@@ -452,6 +452,25 @@ body {
   flex-shrink: 0;
   border: 1px solid rgba(34, 197, 94, 0.2); /* 添加边框增强可见性 */
 }
+
+.card-version,
+.card-version-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  margin-left: 6px;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.15);
+  color: #64748b;
+  white-space: nowrap;
+  flex-shrink: 0;
+  vertical-align: middle;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: 0.2px;
+}
+
+.list-version { color: #64748b; font-family: ui-monospace, Menlo, monospace; font-size: 12px; margin-left: 6px; }
 
 .card-url {
   font-size: 11px;

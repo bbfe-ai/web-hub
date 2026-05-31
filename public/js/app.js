@@ -431,7 +431,7 @@ function renderCard(p) {
       </div>
       <div class="card-body">
         <div class="card-header">
-          <span class="card-name" title="${escapeHtml(p.name)}">${healthDot}${p.favicon ? `<img class="card-favicon" src="${escapeHtml(p.favicon)}" onerror="this.style.display='none'">` : ''}${escapeHtml(p.name)}</span>
+          <span class="card-name" title="${escapeHtml(p.name)}">${healthDot}${p.favicon ? `<img class="card-favicon" src="${escapeHtml(p.favicon)}" onerror="this.style.display='none'">` : ''}${escapeHtml(p.name)}${p.version ? `<span class="card-version" title="版本">${escapeHtml(p.version)}</span>` : ''}</span>
           ${p.category ? `<span class="card-category">${escapeHtml(p.category)}</span>` : ''}
         </div>
         <span class="card-url" title="${escapeHtml(p.url)}">${escapeHtml(p.url)}</span>
@@ -470,6 +470,7 @@ function renderListRow(p) {
         ${healthDot}
         ${p.favicon ? `<img class="card-favicon" src="${escapeHtml(p.favicon)}" onerror="this.style.display='none'">` : ''}
         <span>${escapeHtml(p.name)}</span>
+        ${p.version ? `<span class="card-version" title="版本">${escapeHtml(p.version)}</span>` : ''}
         ${newBadge}
       </span>
       <span class="list-cell">${p.category ? escapeHtml(p.category) : '-'}</span>
@@ -599,6 +600,8 @@ function showAddModal(prefillUrl, prefillName, prefillDesc) {
   document.getElementById('projectForm').reset();
   document.getElementById('projTags').value = '';
   document.getElementById('projTips').value = '';
+  const versionEl = document.getElementById('projVersion');
+  if (versionEl) versionEl.value = '';
   const passInput = document.getElementById('projPass');
   const passBtn = passInput?.parentElement.querySelector('.password-toggle-btn');
   if (passInput && passBtn) {
@@ -678,6 +681,8 @@ async function editProject(id) {
   document.getElementById('projCategory').value = p.category || '';
   document.getElementById('projTags').value = (p.tags || []).join(', ');
   document.getElementById('projTips').value = p.tips || '';
+  const versionEl2 = document.getElementById('projVersion');
+  if (versionEl2) versionEl2.value = p.version || '';
   if (quillEditor) quillEditor.root.innerHTML = p.description || '';
   document.getElementById('addModal').style.display = 'flex';
 
@@ -709,6 +714,7 @@ async function handleSubmit(e) {
     password: document.getElementById('projPass').value,
     category: document.getElementById('projCategory').value.trim() || '默认',
     tips: document.getElementById('projTips').value.trim(),
+    version: (document.getElementById('projVersion')?.value || '').trim(),
     description: quillEditor ? quillEditor.root.innerHTML : '',
     tags: tagsRaw.split(/[,，;；\s]+/).map(s => s.trim()).filter(Boolean),
     user_name: userName,
@@ -837,6 +843,7 @@ function showDetailModal(id) {
     <div class="detail-row"><span class="detail-label">地址</span><span class="detail-value"><a href="${escapeHtml(p.url)}" target="_blank" style="color:var(--primary)">${escapeHtml(p.url)}</a></span></div>
     <div class="detail-row"><span class="detail-label">健康状态</span><span class="detail-value">${health} <button class="mini-btn" onclick="manualHealthCheck(${p.id})">检测</button></span></div>
     <div class="detail-row"><span class="detail-label">分类</span><span class="detail-value">${p.category ? escapeHtml(p.category) : '-'}</span></div>
+    <div class="detail-row"><span class="detail-label">版本</span><span class="detail-value">${p.version ? `<span class="card-version-badge">${escapeHtml(p.version)}</span>` : '-'}</span></div>
     <div class="detail-row"><span class="detail-label">标签</span><span class="detail-value">${tagsHtml}</span></div>
     ${p.tips ? `<div class="detail-row"><span class="detail-label">小贴士</span><span class="detail-value" style="color:#b45309">💡 ${escapeHtml(p.tips)}</span></div>` : ''}
     <div class="detail-row"><span class="detail-label">用户名</span><span class="detail-value">${p.username ? escapeHtml(p.username) : '-'}</span></div>

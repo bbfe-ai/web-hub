@@ -70,6 +70,7 @@ addColumnIfMissing('projects', 'favicon', "TEXT DEFAULT ''");
 addColumnIfMissing('projects', 'health_status', "TEXT DEFAULT 'unknown'");
 addColumnIfMissing('projects', 'last_checked_at', 'DATETIME');
 addColumnIfMissing('projects', 'last_screenshot_at', 'DATETIME');
+addColumnIfMissing('projects', 'version', "TEXT DEFAULT ''");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS project_screenshots (
@@ -452,7 +453,7 @@ app.get('/api/projects/:id', (req, res) => {
 });
 
 app.post('/api/projects', async (req, res) => {
-  const { name, url, username, password, description, category, tips, tags, user_name, fetch_metadata } = req.body;
+  const { name, url, username, password, description, category, tips, tags, version, user_name, fetch_metadata } = req.body;
   if (!name || !url) return res.status(400).json({ success: false, message: '名称和URL为必填项' });
 
   let finalName = name;
@@ -469,10 +470,10 @@ app.post('/api/projects', async (req, res) => {
   }
 
   const result = db.prepare(
-    `INSERT INTO projects (name, url, username, password, description, category, tips, favicon, created_by, updated_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO projects (name, url, username, password, description, category, tips, version, favicon, created_by, updated_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(finalName, url, username || '', password || '', finalDesc, category || '默认',
-        tips || '', favicon, user_name || '', user_name || '');
+        tips || '', version || '', favicon, user_name || '', user_name || '');
 
   const projectId = result.lastInsertRowid;
   if (Array.isArray(tags)) setProjectTags(projectId, tags);
@@ -539,14 +540,14 @@ app.post('/api/projects/batch', async (req, res) => {
 });
 
 app.put('/api/projects/:id', (req, res) => {
-  const { name, url, username, password, description, category, tips, tags, user_name } = req.body;
+  const { name, url, username, password, description, category, tips, tags, version, user_name } = req.body;
   if (!name || !url) return res.status(400).json({ success: false, message: '名称和URL为必填项' });
 
   db.prepare(
     `UPDATE projects SET name=?, url=?, username=?, password=?, description=?, category=?,
-     tips=?, updated_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`
+     tips=?, version=?, updated_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`
   ).run(name, url, username || '', password || '', description || '', category || '默认',
-        tips || '', user_name || '', req.params.id);
+        tips || '', version || '', user_name || '', req.params.id);
 
   if (Array.isArray(tags)) setProjectTags(req.params.id, tags);
 
