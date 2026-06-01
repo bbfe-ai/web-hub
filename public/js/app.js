@@ -418,7 +418,7 @@ function renderCard(p) {
   const tagsHtml = (p.tags || []).slice(0, 3).map(t =>
     `<span class="card-tag" onclick="event.stopPropagation();selectTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`
   ).join('');
-  const tipsHtml = p.tips ? `<div class="card-tips">💡 ${escapeHtml(p.tips)}</div>` : '';
+  const tipsHtml = p.tips ? `<div class="card-tips-bar" title="${escapeHtml(p.tips)}"><span class="tips-icon">💡</span><span class="tips-text">${escapeHtml(p.tips)}</span></div>` : '';
 
   return `
     <div class="project-card" onclick="openProject(${p.id})">
@@ -428,15 +428,16 @@ function renderCard(p) {
         <div class="card-preview-overlay"><div class="card-preview-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
         </div></div>
+        ${tipsHtml}
+        ${p.version ? `<span class="card-version-corner" title="版本 ${escapeHtml(p.version)}">v${escapeHtml(String(p.version).replace(/^v/i, ''))}</span>` : ''}
       </div>
       <div class="card-body">
         <div class="card-header">
-          <span class="card-name" title="${escapeHtml(p.name)}">${healthDot}${p.favicon ? `<img class="card-favicon" src="${escapeHtml(p.favicon)}" onerror="this.style.display='none'">` : ''}${escapeHtml(p.name)}${p.version ? `<span class="card-version" title="版本">${escapeHtml(p.version)}</span>` : ''}</span>
+          <span class="card-name" title="${escapeHtml(p.name)}">${healthDot}${p.favicon ? `<img class="card-favicon" src="${escapeHtml(p.favicon)}" onerror="this.style.display='none'">` : ''}${escapeHtml(p.name)}</span>
           ${p.category ? `<span class="card-category">${escapeHtml(p.category)}</span>` : ''}
         </div>
         <span class="card-url" title="${escapeHtml(p.url)}">${escapeHtml(p.url)}</span>
         ${tagsHtml ? `<div class="card-tags">${tagsHtml}</div>` : ''}
-        ${tipsHtml}
         ${p.description ? `<span class="card-desc" title="${escapeHtml(stripHtml(p.description))}">${stripHtml(p.description)}</span>` : ''}
         <div class="card-footer">
           <div class="card-meta">
@@ -695,7 +696,7 @@ async function editProject(id) {
       <div class="screenshot-item" id="ss-${s.id}">
         <img src="${escapeHtml(s.path)}" alt="截图">
         <span class="screenshot-badge">${s.thumbnail ? '主图' : ''}</span>
-        <button class="screenshot-delete-btn" onclick="event.stopPropagation();deleteScreenshot(${s.id}, ${p.id})">✕</button>
+        <button type="button" class="screenshot-delete-btn" onclick="event.stopPropagation();event.preventDefault();deleteScreenshot(${s.id}, ${p.id})">✕</button>
       </div>
     `).join('');
   } else {
