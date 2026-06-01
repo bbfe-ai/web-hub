@@ -418,7 +418,8 @@ function renderCard(p) {
   const tagsHtml = (p.tags || []).slice(0, 3).map(t =>
     `<span class="card-tag" onclick="event.stopPropagation();selectTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`
   ).join('');
-  const tipsHtml = p.tips ? `<div class="card-tips-bar" title="${escapeHtml(p.tips)}"><span class="tips-icon">💡</span><span class="tips-text">${escapeHtml(p.tips)}</span></div>` : '';
+  const versionInline = p.version ? `<span class="card-version-inline" title="版本">v${escapeHtml(String(p.version).replace(/^v/i, ''))}</span>` : '';
+  const tipsHtml = p.tips ? `<div class="card-tips-bar" title="${escapeHtml(p.tips)}"><span class="tips-icon">💡</span><span class="tips-text">${escapeHtml(p.tips)}</span>${versionInline}</div>` : '';
 
   return `
     <div class="project-card" onclick="openProject(${p.id})">
@@ -429,7 +430,7 @@ function renderCard(p) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
         </div></div>
         ${tipsHtml}
-        ${p.version ? `<span class="card-version-corner" title="版本 ${escapeHtml(p.version)}">v${escapeHtml(String(p.version).replace(/^v/i, ''))}</span>` : ''}
+        ${(p.version && !p.tips) ? `<span class="card-version-corner" title="版本 ${escapeHtml(p.version)}">v${escapeHtml(String(p.version).replace(/^v/i, ''))}</span>` : ''}
       </div>
       <div class="card-body">
         <div class="card-header">
