@@ -621,6 +621,7 @@ function hideAddModal() {
   document.getElementById('addModal').style.display = 'none';
   document.getElementById('screenshotSection').style.display = 'none';
   document.getElementById('screenshotList').innerHTML = '';
+  if (location.search.includes('edit=')) history.pushState({}, '', location.pathname);
   // 编辑过程中如有删除截图/上传截图等"局部刷新"操作，关闭模态时统一同步外层列表
   if (window._webhubDirty) {
     window._webhubDirty = false;
@@ -670,9 +671,13 @@ function toggleDetailPassword(btn) {
   }
 }
 
-async function editProject(id) {
+async function editProject(id, skipPush) {
   const res = await api(`${API}/projects/${id}`);
   const p = res.data;
+  if (!skipPush) {
+    const method = location.search.includes('detail=') ? 'replaceState' : 'pushState';
+    history[method]({ modal: 'edit', id }, '', `?edit=${id}`);
+  }
   document.getElementById('editId').value = p.id;
   document.getElementById('modalTitle').textContent = '编辑项目';
   document.getElementById('submitBtn').textContent = '更新';
@@ -832,9 +837,10 @@ async function deleteScreenshot(screenshotId, projectId) {
 }
 
 // ============ 详情 ============
-function showDetailModal(id) {
+function showDetailModal(id, skipPush) {
   const p = projects.find(x => x.id === id);
   if (!p) return;
+  if (!skipPush) history.pushState({ modal: 'detail', id }, '', `?detail=${id}`);
   document.getElementById('detailTitle').textContent = p.name;
   const tagsHtml = (p.tags || []).map(t => `<span class="card-tag">${escapeHtml(t)}</span>`).join(' ') || '-';
   const health = p.health_status === 'online' ? '<span style="color:#16a34a">● 正常</span>'
@@ -860,13 +866,17 @@ function showDetailModal(id) {
     <div class="detail-actions">
       <button class="btn btn-primary" onclick="hideDetailModal();openProject(${p.id})">打开项目</button>
       <button class="btn btn-ghost" onclick="hideDetailModal();showQrModal(${p.id})">📱 二维码</button>
-      <button class="btn btn-ghost" onclick="hideDetailModal();editProject(${p.id})">编辑</button>
+      <button class="btn btn-ghost" onclick="copyShareUrl()">🔗 分享</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('detailModal').style.display='none';editProject(${p.id})">编辑</button>
       <button class="btn btn-danger" onclick="hideDetailModal();deleteProject(${p.id})">删除</button>
     </div>
   `;
   document.getElementById('detailModal').style.display = 'flex';
 }
-function hideDetailModal() { document.getElementById('detailModal').style.display = 'none'; }
+function hideDetailModal() {
+  document.getElementById('detailModal').style.display = 'none';
+  if (location.search.includes('detail=')) history.pushState({}, '', location.pathname);
+}
 
 async function manualHealthCheck(id) {
   showToast('检测中...');
@@ -1120,7 +1130,38 @@ document.addEventListener('paste', function(e) {
 });
 
 // ============ 启动 ============
-refresh();
+refresh().then(() => {
+  const params = new URLSearchParams(location.search);
+  const detailId = parseInt(params.get('detail'));
+  const editId = parseInt(params.get('edit'));
+  if (detailId) showDetailModal(detailId, true);
+  else if (editId) editProject(editId, true);
+});
+
+// ============ URL 联动 (popstate) ============
+window.addEventListener('popstate', (e) => {
+  const state = e.state;
+  document.getElementById('detailModal').style.display = 'none';
+  document.getElementById('addModal').style.display = 'none';
+  if (state && state.modal === 'detail') showDetailModal(state.id, true);
+  else if (state && state.modal === 'edit') editProject(state.id, true);
+});
+
+// ============ 分享链接 ============
+function copyShareUrl() {
+  const url = location.href;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('链接已复制到剪贴板');
+  }).catch(() => {
+    const input = document.createElement('input');
+    input.value = url;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+    showToast('链接已复制到剪贴板');
+  });
+}
 
 // 首次访问引导设置昵称
 setTimeout(() => {
