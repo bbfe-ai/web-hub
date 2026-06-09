@@ -173,12 +173,13 @@ async function getBrowser() {
   return browserPool;
 }
 
-async function executeCapture(projectId, url) {
+async function executeCapture(projectId, url, options = {}) {
   if (isScreenshotting[projectId]) return null;
   isScreenshotting[projectId] = true;
 
+  const { replaceThumb = false } = options;
   const currentCount = db.prepare('SELECT COUNT(*) as cnt FROM project_screenshots WHERE project_id = ?').get(projectId);
-  if (currentCount.cnt >= 4) {
+  if (!replaceThumb && currentCount.cnt >= 4) {
     delete isScreenshotting[projectId];
     return null;
   }
