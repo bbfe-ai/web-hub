@@ -406,6 +406,7 @@ function renderCard(p) {
   }
 
   const newBadge = isNew(p.created_at) ? '<span class="card-new-badge">NEW</span>' : '';
+  const pinBadge = p.pinned ? '<span class="card-pin-badge" title="已置顶">📌</span>' : '';
   const healthDot = p.health_status === 'offline'
     ? '<span class="health-dot offline" title="链接最近不可达"></span>'
     : (p.health_status === 'online' ? '<span class="health-dot online" title="链接正常"></span>' : '');
@@ -422,8 +423,9 @@ function renderCard(p) {
   const tipsHtml = p.tips ? `<div class="card-tips-bar" title="${escapeHtml(p.tips)}"><span class="tips-icon">💡</span><span class="tips-text">${escapeHtml(p.tips)}</span>${versionInline}</div>` : '';
 
   return `
-    <div class="project-card" onclick="openProject(${p.id})">
+    <div class="project-card${p.pinned ? ' pinned' : ''}" onclick="openProject(${p.id})">
       ${newBadge}
+      ${pinBadge}
       <div class="card-preview">
         ${previewHtml}
         <div class="card-preview-overlay"><div class="card-preview-icon">
@@ -442,11 +444,12 @@ function renderCard(p) {
         ${p.description ? `<span class="card-desc" title="${escapeHtml(stripHtml(p.description))}">${stripHtml(p.description)}</span>` : ''}
         <div class="card-footer">
           <div class="card-meta">
-            <span class="card-time">${formatTime(p.created_at)}</span>
+            <span class="card-time" title="更新时间">${formatTime(p.updated_at)}</span>
             ${author}
             <span class="card-click-count" title="点击次数">${p.click_count || 0} 次</span>
           </div>
           <div class="card-actions">
+            <button class="card-action-btn${p.pinned ? ' active' : ''}" onclick="event.stopPropagation();togglePin(${p.id})" title="${p.pinned ? '取消置顶' : '置顶'}">${p.pinned ? '📌' : '📌'}</button>
             <button class="card-action-btn" onclick="event.stopPropagation();showQrModal(${p.id})" title="二维码">📱</button>
             <button class="card-action-btn" onclick="event.stopPropagation();showDetailModal(${p.id})" title="详情">详情</button>
             <button class="card-action-btn" onclick="event.stopPropagation();editProject(${p.id})" title="编辑">编辑</button>
@@ -480,6 +483,7 @@ function renderListRow(p) {
       <span class="list-cell"><b>${p.click_count || 0}</b> 次</span>
       <span class="list-cell">${formatTime(p.updated_at)}${author ? ' · ' + escapeHtml(author) : ''}</span>
       <span class="list-cell list-actions">
+        <button class="${p.pinned ? 'active' : ''}" onclick="event.stopPropagation();togglePin(${p.id})" title="${p.pinned ? '取消置顶' : '置顶'}">📌</button>
         <button onclick="event.stopPropagation();showDetailModal(${p.id})" title="详情">📋</button>
         <button onclick="event.stopPropagation();showQrModal(${p.id})" title="二维码">📱</button>
         <button onclick="event.stopPropagation();editProject(${p.id})" title="编辑">✏️</button>
@@ -744,6 +748,17 @@ async function deleteProject(id) {
   if (!confirm(tip)) return;
   await api(`${API}/projects/${id}`, { method: 'DELETE' });
   showToast('项目已删除');
+  refresh();
+}
+
+async function togglePin(id) {
+  const p = projects.find(x => x.id === id);
+  const next = p && p.pinned ? 0 : 1;
+  await api(`${API}/projects/${id}/pin`, {
+    method: 'PUT',
+    body: JSON.stringify({ pinned: next }),
+  });
+  showToast(next ? '已置顶' : '已取消置顶');
   refresh();
 }
 

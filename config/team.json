@@ -5,5 +5,5 @@
   "compactViewByDefault": false,
   "newThresholdDays": 7,
   "healthCheckIntervalHours": 24,
-  "screenshotRefreshIntervalDays": 7
+  "screenshotRefreshIntervalDays": 180
 }

@@ -71,6 +71,7 @@ addColumnIfMissing('projects', 'health_status', "TEXT DEFAULT 'unknown'");
 addColumnIfMissing('projects', 'last_checked_at', 'DATETIME');
 addColumnIfMissing('projects', 'last_screenshot_at', 'DATETIME');
 addColumnIfMissing('projects', 'version', "TEXT DEFAULT ''");
+addColumnIfMissing('projects', 'pinned', 'INTEGER DEFAULT 0');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS project_screenshots (
@@ -409,7 +410,7 @@ app.get('/api/projects', (req, res) => {
     params.push(kw, kw, kw, kw);
   }
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
-  sql += ' GROUP BY p.id ORDER BY p.updated_at DESC';
+  sql += ' GROUP BY p.id ORDER BY p.pinned DESC, p.updated_at DESC';
 
   const projects = db.prepare(sql).all(...params);
   attachTagsToProjects(projects);
@@ -555,6 +556,14 @@ app.put('/api/projects/:id', (req, res) => {
   const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
   project.tags = getProjectTags(project.id);
   res.json({ success: true, data: project });
+});
+
+app.put('/api/projects/:id/pin', (req, res) => {
+  const project = db.prepare('SELECT id FROM projects WHERE id = ?').get(req.params.id);
+  if (!project) return res.status(404).json({ success: false, message: '项目不存在' });
+  const pinned = req.body.pinned ? 1 : 0;
+  db.prepare('UPDATE projects SET pinned=? WHERE id=?').run(pinned, req.params.id);
+  res.json({ success: true, data: { id: Number(req.params.id), pinned } });
 });
 
 app.delete('/api/projects/:id', (req, res) => {
