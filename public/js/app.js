@@ -407,6 +407,7 @@ function renderCard(p) {
 
   const newBadge = isNew(p.created_at) ? '<span class="card-new-badge">NEW</span>' : '';
   const pinBadge = p.pinned ? '<span class="card-pin-badge" title="已置顶">📌</span>' : '';
+  const offlineBadge = p.offline ? '<span class="card-offline-badge" title="已下线">🚫</span>' : '';
   const healthDot = p.health_status === 'offline'
     ? '<span class="health-dot offline" title="链接最近不可达"></span>'
     : (p.health_status === 'online' ? '<span class="health-dot online" title="链接正常"></span>' : '');
@@ -423,9 +424,10 @@ function renderCard(p) {
   const tipsHtml = p.tips ? `<div class="card-tips-bar" title="${escapeHtml(p.tips)}"><span class="tips-icon">💡</span><span class="tips-text">${escapeHtml(p.tips)}</span>${versionInline}</div>` : '';
 
   return `
-    <div class="project-card${p.pinned ? ' pinned' : ''}" onclick="openProject(${p.id})">
+    <div class="project-card${p.pinned ? ' pinned' : ''}${p.offline ? ' offline' : ''}" onclick="openProject(${p.id})">
       ${newBadge}
       ${pinBadge}
+      ${offlineBadge}
       <div class="card-preview">
         ${previewHtml}
         <div class="card-preview-overlay"><div class="card-preview-icon">
@@ -450,6 +452,7 @@ function renderCard(p) {
           </div>
           <div class="card-actions">
             <button class="card-action-btn${p.pinned ? ' active' : ''}" onclick="event.stopPropagation();togglePin(${p.id})" title="${p.pinned ? '取消置顶' : '置顶'}">${p.pinned ? '📌' : '📌'}</button>
+            <button class="card-action-btn${p.offline ? ' active' : ''}" onclick="event.stopPropagation();toggleOffline(${p.id})" title="${p.offline ? '恢复上线' : '下线'}">${p.offline ? '↩️' : '🚫'}</button>
             <button class="card-action-btn" onclick="event.stopPropagation();showQrModal(${p.id})" title="二维码">📱</button>
             <button class="card-action-btn" onclick="event.stopPropagation();showDetailModal(${p.id})" title="详情">详情</button>
             <button class="card-action-btn" onclick="event.stopPropagation();editProject(${p.id})" title="编辑">编辑</button>
@@ -470,7 +473,7 @@ function renderListRow(p) {
   const tagsHtml = (p.tags || []).slice(0, 4).map(t => `<span class="list-tag">${escapeHtml(t)}</span>`).join('');
   const author = p.updated_by || p.created_by || '';
   return `
-    <div class="list-row" onclick="openProject(${p.id})">
+    <div class="list-row${p.offline ? ' offline' : ''}" onclick="openProject(${p.id})">
       <span class="list-cell list-name">
         ${healthDot}
         ${p.favicon ? `<img class="card-favicon" src="${escapeHtml(p.favicon)}" onerror="this.style.display='none'">` : ''}
@@ -484,6 +487,7 @@ function renderListRow(p) {
       <span class="list-cell">${formatTime(p.updated_at)}${author ? ' · ' + escapeHtml(author) : ''}</span>
       <span class="list-cell list-actions">
         <button class="${p.pinned ? 'active' : ''}" onclick="event.stopPropagation();togglePin(${p.id})" title="${p.pinned ? '取消置顶' : '置顶'}">📌</button>
+        <button class="${p.offline ? 'active' : ''}" onclick="event.stopPropagation();toggleOffline(${p.id})" title="${p.offline ? '恢复上线' : '下线'}">🚫</button>
         <button onclick="event.stopPropagation();showDetailModal(${p.id})" title="详情">📋</button>
         <button onclick="event.stopPropagation();showQrModal(${p.id})" title="二维码">📱</button>
         <button onclick="event.stopPropagation();editProject(${p.id})" title="编辑">✏️</button>
@@ -517,6 +521,7 @@ function openProjectById(id) {
 }
 async function openProject(id) {
   const p = projects.find(x => x.id === id);
+  if (p && p.offline) { showToast('该项目已下线', 'error'); return; }
   if (!p) {
     // 可能是从动态列表里点的，单独取
     try {
@@ -759,6 +764,17 @@ async function togglePin(id) {
     body: JSON.stringify({ pinned: next }),
   });
   showToast(next ? '已置顶' : '已取消置顶');
+  refresh();
+}
+
+async function toggleOffline(id) {
+  const p = projects.find(x => x.id === id);
+  const next = p && p.offline ? 0 : 1;
+  await api(`${API}/projects/${id}/offline`, {
+    method: 'PUT',
+    body: JSON.stringify({ offline: next }),
+  });
+  showToast(next ? '已下线' : '已恢复上线');
   refresh();
 }
 

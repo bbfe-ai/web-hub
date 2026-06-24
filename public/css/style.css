@@ -1510,6 +1510,22 @@ form { padding: 24px; }
   filter: none;
 }
 
+.card-offline-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 2;
+  font-size: 14px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+}
+.project-card.offline .card-pin-badge { right: 30px; }
+.project-card.offline,
+.list-row.offline {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
 .health-dot {
   display: inline-block;
   width: 8px;

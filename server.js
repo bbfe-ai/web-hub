@@ -72,6 +72,7 @@ addColumnIfMissing('projects', 'last_checked_at', 'DATETIME');
 addColumnIfMissing('projects', 'last_screenshot_at', 'DATETIME');
 addColumnIfMissing('projects', 'version', "TEXT DEFAULT ''");
 addColumnIfMissing('projects', 'pinned', 'INTEGER DEFAULT 0');
+addColumnIfMissing('projects', 'offline', 'INTEGER DEFAULT 0');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS project_screenshots (
@@ -564,6 +565,14 @@ app.put('/api/projects/:id/pin', (req, res) => {
   const pinned = req.body.pinned ? 1 : 0;
   db.prepare('UPDATE projects SET pinned=? WHERE id=?').run(pinned, req.params.id);
   res.json({ success: true, data: { id: Number(req.params.id), pinned } });
+});
+
+app.put('/api/projects/:id/offline', (req, res) => {
+  const project = db.prepare('SELECT id FROM projects WHERE id = ?').get(req.params.id);
+  if (!project) return res.status(404).json({ success: false, message: '项目不存在' });
+  const offline = req.body.offline ? 1 : 0;
+  db.prepare('UPDATE projects SET offline=? WHERE id=?').run(offline, req.params.id);
+  res.json({ success: true, data: { id: Number(req.params.id), offline } });
 });
 
 app.delete('/api/projects/:id', (req, res) => {
