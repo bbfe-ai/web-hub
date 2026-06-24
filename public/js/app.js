@@ -994,6 +994,7 @@ function initLightbox() {
   grid.addEventListener('mouseover', function(e) {
     const cardPreview = e.target.closest('.card-preview');
     if (!cardPreview) return;
+    if (cardPreview.closest('.project-card.offline')) return;
 
     // 鼠标所在的具体那张缩略图
     const hoveredImg = e.target.closest('[data-lightbox]');

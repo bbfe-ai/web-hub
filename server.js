@@ -411,7 +411,7 @@ app.get('/api/projects', (req, res) => {
     params.push(kw, kw, kw, kw);
   }
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
-  sql += ' GROUP BY p.id ORDER BY p.pinned DESC, p.updated_at DESC';
+  sql += ' GROUP BY p.id ORDER BY p.offline ASC, p.pinned DESC, p.updated_at DESC';
 
   const projects = db.prepare(sql).all(...params);
   attachTagsToProjects(projects);
